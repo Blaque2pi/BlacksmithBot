@@ -42,13 +42,21 @@ class MyClient(discord.Client):
             return
         if message.author.id == self.user.id:
             return
-        if message.author.id == int(config('DISCORD_MASTER_ID')):
+        if message.content.lower().startswith("//"):
+            return
+        if message.author.id == int(config('BLAKE')) or message.author.id == int(config('WHELCH')) or message.author.id == int(config('MASON')) or message.author.id == int(config('AARON') or message.author.id == int(config('SAMUEL'))):
             if message.content == 'reset':
                 self.conversation_history = default_conversation_history.copy()
                 self.hasAttemptedConvince = False
                 await message.channel.send('Andrew: What can I do for ya?')
+                print(f'{message.author} reset the Blacksmith!')
                 print(f'Andrew: What can I do for ya?')
                 return
+
+        if message.author.id == int(config('BLAKE')):
+            if message.content == 'sleep':
+                await message.channel.send('Andrew: Nighty night!')
+                exit()
 
         if message.content.lower().startswith("[persuasion]"):
             message.content = message.content[len("[persuasion]"):].lstrip()  # Remove the word and any leading whitespace
