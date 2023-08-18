@@ -1,27 +1,27 @@
 import openai
 import random
 import discord
-import sqlite3
+import json
 from decouple import config
 
 openai.api_key = config('OPENAI_API_KEY')
 
 def get_system_prompt(profile, is_convinced):
-    name = profile[1]
-    surname = profile[2]
-    age = profile[3]
-    personality = profile[4]
-    race = profile[5]
-    profession = profile[6]
-    city = profile[7]
-    connections = profile[8]
-    knowledge = profile[9]
-    antiknowledge = profile[10]
-    secrets = profile[11]
+    name = profile["name"]
+    surname = profile["surname"]
+    age = profile["age"]
+    personality = profile["personality"]
+    race = profile["race"]
+    occupation = profile["occupation"]
+    location = profile["location"]
+    connections = profile["connections"]
+    knowledge = profile["knowledge"]
+    antiknowledge = profile["antiknowledge"]
+    secrets = profile["secrets"]
     message = "You are an NPC in a game of dungeons and dragons interacting with player characters. "
     message += "The character who is speaking will have their name indicated at the beginning of each message. "
     message += "You don't know real-world topics or modern technology. "
-    message += f"You are {name} {surname}, a {age} year old {personality} {race} {profession} in {city}. "
+    message += f"You are {name} {surname}, a {age} year old {personality} {race} {occupation} in {location}. "
     message += f"You know the following people: {connections}. "
     message += f"You know that: {knowledge}. "
     message += f"You do not know: {antiknowledge}. "
@@ -47,9 +47,8 @@ def roll(num, sides, mod=0):
 
     return total_sum
 
-#alter function to include modifiers, may need a way to store player skill modifiers in a table
-def abilityCheck(target):
-    result = roll(1, 20)
+def abilityCheck(target, mod=0):
+    result = roll(1, 20, mod)
     return result >= target
 
 #run multiple bots from same script, or separate scripts for different bots?
@@ -57,13 +56,16 @@ class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
         self.hasAttemptedConvince = False
-        self.npcid = 1
+        self.npcid = 0
         self.is_convinced = False
-        self.conn = sqlite3.connect("NPC")
-        self.cursor = self.conn.cursor()
-        self.profile = self.cursor.execute("SELECT * FROM npc WHERE id=?", (self.npcid,)).fetchone()
-        self.name = self.profile[1]
-        self.greeting = self.profile[12]
+        with open('npc.json', 'r') as file:
+            npcs = json.load(file)
+        self.profiles = [npc for npc in npcs if npc["location"] == "Poopsmek"]
+        print(f"{self.profiles}")
+        self.profile = self.profiles[self.npcid]
+        print(f"{self.profile}")
+        self.name = self.profile["name"]
+        self.greeting = self.profile["greeting"]
         self.default_conversation_history = [
             {"role": "system", "content": f"{get_system_prompt(self.profile, self.is_convinced)}"},
             {"role": "assistant", "content": f"{self.name}: {self.greeting}"}
@@ -78,8 +80,8 @@ class MyClient(discord.Client):
             return
         if message.content.startswith("//"):
             return
-#implement discord role instead of individual ids for control commands. Also, allow for command messages to be private?
-        if message.author.id == int(config('BLAKE')) or message.author.id == int(config('WHELCH')) or message.author.id == int(config('MASON')) or message.author.id == int(config('AARON') or message.author.id == int(config('SAMUEL'))):
+#allow for command messages to be sent through DM as well?
+        if discord.utils.get(message.author.roles, name="botoverlord"):
             if message.content == 'reset':
                 self.conversation_history = self.default_conversation_history
                 self.hasAttemptedConvince = False
