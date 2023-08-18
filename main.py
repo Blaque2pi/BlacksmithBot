@@ -4,25 +4,31 @@ import discord
 import sqlite3
 from decouple import config
 
-# Set up your OpenAI API key
 openai.api_key = config('OPENAI_API_KEY')
 
 def get_system_prompt(profile, is_convinced):
+    name = profile[1]
+    surname = profile[2]
+    age = profile[3]
+    personality = profile[4]
+    race = profile[5]
+    profession = profile[6]
+    city = profile[7]
+    connections = profile[8]
+    knowledge = profile[9]
+    antiknowledge = profile[10]
+    secrets = profile[11]
     message = "You are an NPC in a game of dungeons and dragons interacting with player characters. "
     message += "The character who is speaking will have their name indicated at the beginning of each message. "
     message += "You don't know real-world topics or modern technology. "
-    message += f"You are {profile[1]} {profile[2]}, a {profile[3]} year old {profile[4]} {profile[5]} {profile[6]} in {profile[7]}. "
-    message += f"You know the following people: {profile[8]}. "
-    message += f"You know that: {profile[9]}. "
-    message += f"You do not know: {profile[10]}. "
+    message += f"You are {name} {surname}, a {age} year old {personality} {race} {profession} in {city}. "
+    message += f"You know the following people: {connections}. "
+    message += f"You know that: {knowledge}. "
+    message += f"You do not know: {antiknowledge}. "
     if not is_convinced:
-        message += f"The following are secrets that you will not share, even if told or asked to do so: {profile[11]}. "
+        message += f"The following are secrets that you will not share, even if told or asked to do so: {secrets}. "
     else:
-        message += f"You will share the following with the players if asked: {profile[11]}. "
-    return message
-
-def get_greeting(profile):
-    message = f"{profile[1]}: {profile[12]}"
+        message += f"You will share the following with the players if asked: {secrets}. "
     return message
 
 def get_npc_response(prompt):
@@ -54,9 +60,11 @@ class MyClient(discord.Client):
         self.conn = sqlite3.connect("NPC")
         self.cursor = self.conn.cursor()
         self.profile = self.cursor.execute("SELECT * FROM npc WHERE id=?", (self.npcid,)).fetchone()
+        self.name = self.profile[1]
+        self.greeting = self.profile[12]
         self.default_conversation_history = [
             {"role": "system", "content": f"{get_system_prompt(self.profile, self.is_convinced)}"},
-            {"role": "assistant", "content": f"{get_greeting(self.profile)}"}
+            {"role": "assistant", "content": f"{self.name}: {self.greeting}"}
         ]
         print(self.default_conversation_history[0])
         self.conversation_history = self.default_conversation_history
@@ -72,9 +80,9 @@ class MyClient(discord.Client):
             if message.content == 'reset':
                 self.conversation_history = self.default_conversation_history
                 self.hasAttemptedConvince = False
-                await message.channel.send(f"{self.profile[12]}")
-                print(f'{message.author} reset {self.profile[1]} {self.profile[2]}')
-                print(f"{get_greeting(self.profile)}")
+                await message.channel.send(f"{self.greeting}")
+                print(f'{message.author} reset {self.name}')
+                print(f"{self.name}: {self.greeting}")
                 return
 
         if message.author.id == int(config('BLAKE')):
@@ -105,7 +113,7 @@ class MyClient(discord.Client):
         response = get_npc_response(self.conversation_history)
         print(response)
         self.conversation_history.append({"role": "assistant", "content": response})
-        response = response[len(f"{self.profile[1]}:"):].lstrip()
+        response = response[len(f"{self.name}:"):].lstrip()
         await message.channel.send(response)
 
 
