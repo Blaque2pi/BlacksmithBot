@@ -1,10 +1,14 @@
 import openai
 import random
 import discord
+import asyncio
 import json
 from decouple import config
 
 openai.api_key = config('OPENAI_API_KEY')
+
+async def run_bot(client, profile_name):
+    await client.start(config(f"{profile_name.upper()}_DISCORD_TOKEN"))
 
 def get_system_prompt(profile, is_convinced):
     name = profile["name"]
@@ -51,30 +55,27 @@ def abilityCheck(target, mod=0):
     result = roll(1, 20, mod)
     return result >= target
 
-#run multiple bots from same script, or separate scripts for different bots?
 class MyClient(discord.Client):
-    async def on_ready(self):
-        print(f'Logged on as {self.user}!')
-        self.hasAttemptedConvince = False
-        self.npcid = 0
+    def __init__(self, profile, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # Ensure you call the base class's init
+        self.profile = profile
         self.is_convinced = False
-        with open('npc.json', 'r') as file:
-            npcs = json.load(file)
-        self.profiles = [npc for npc in npcs if npc["location"] == "Poopsmek"]
-        print(f"{self.profiles}")
-        self.profile = self.profiles[self.npcid]
-        print(f"{self.profile}")
+        self.hasAttemptedConvince = False
         self.name = self.profile["name"]
+        self.surname = self.profile["surname"]
         self.greeting = self.profile["greeting"]
+        self.channel_id = f"{self.name.upper()}_{self.surname.upper()}_CHANNEL_ID"
         self.default_conversation_history = [
             {"role": "system", "content": f"{get_system_prompt(self.profile, self.is_convinced)}"},
             {"role": "assistant", "content": f"{self.name}: {self.greeting}"}
         ]
-        print(self.default_conversation_history[0])
-        self.conversation_history = self.default_conversation_history
+        self.conversation_history = self.default_conversation_history[:]
+
+    async def on_ready(self):
+        print(f'Logged on as {self.user}!')
 
     async def on_message(self, message):
-        if not message.channel.id == int(config('BLACKSMITH_CHANNEL_ID')):
+        if not message.channel.id == int(config(self.channel_id)):
             return
         if message.author.id == self.user.id:
             return
@@ -84,6 +85,7 @@ class MyClient(discord.Client):
         if discord.utils.get(message.author.roles, name="botoverlord"):
             if message.content == 'reset':
                 self.conversation_history = self.default_conversation_history
+                print(self.conversation_history)
                 self.hasAttemptedConvince = False
                 await message.channel.send(f"{self.greeting}")
                 print(f'{message.author} reset {self.name}')
@@ -91,6 +93,7 @@ class MyClient(discord.Client):
                 return
 
 #implement persistent memory, perhaps store conversation history in a text file which is wiped on reset?
+        print(f"{message.author.id} and {int(config('BLAKE'))}")
         if message.author.id == int(config('BLAKE')):
             if message.content == 'sleep':
                 await message.channel.send('Nighty night!')
@@ -127,5 +130,19 @@ class MyClient(discord.Client):
 intents = discord.Intents.default()
 intents.message_content = True
 
-client = MyClient(intents=intents)
-client.run(config('BLACKSMITH_DISCORD_TOKEN'))
+input_location = input("Where are we? ")
+with open('npc.json', 'r') as file:
+    input_npcs = json.load(file)
+while True:
+    input_profiles = [npc for npc in input_npcs if npc["location"] == f"{input_location}"]
+    input_location = input(f"There are {len(input_profiles)} profiles for {input_location}. Press Enter to proceed, or enter a new location. ")
+    if input_location == "":
+        break
+loop = asyncio.get_event_loop()
+for i in range(len(input_profiles)):
+    profile_index = i-1
+    input_profile = input_profiles[profile_index]
+    profile_name = f"{input_profile['name']}_{input_profile['surname']}"
+    client = MyClient(intents=intents, profile = input_profile)
+    loop.create_task(run_bot(client, profile_name))
+loop.run_forever()
