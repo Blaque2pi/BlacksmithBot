@@ -84,8 +84,7 @@ class MyClient(discord.Client):
 #allow for command messages to be sent through DM as well?
         if discord.utils.get(message.author.roles, name="botoverlord"):
             if message.content == 'reset':
-                self.conversation_history = self.default_conversation_history
-                print(self.conversation_history)
+                self.conversation_history = self.default_conversation_history[:]
                 self.hasAttemptedConvince = False
                 await message.channel.send(f"{self.greeting}")
                 print(f'{message.author} reset {self.name}')
@@ -93,8 +92,10 @@ class MyClient(discord.Client):
                 return
 
 #implement persistent memory, perhaps store conversation history in a text file which is wiped on reset?
-        print(f"{message.author.id} and {int(config('BLAKE'))}")
         if message.author.id == int(config('BLAKE')):
+            if message.content == 'print':
+                print(self.conversation_history)
+                return
             if message.content == 'sleep':
                 await message.channel.send('Nighty night!')
                 exit()
@@ -123,6 +124,7 @@ class MyClient(discord.Client):
         response = get_npc_response(self.conversation_history)
         print(response)
         self.conversation_history.append({"role": "assistant", "content": response})
+        #change to if statement which checks if message starts with name
         response = response[len(f"{self.name}:"):].lstrip()
         await message.channel.send(response)
 
