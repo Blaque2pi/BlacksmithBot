@@ -47,10 +47,12 @@ def roll(num, sides, mod=0):
 
     return total_sum
 
+#alter function to include modifiers, may need a way to store player skill modifiers in a table
 def abilityCheck(target):
     result = roll(1, 20)
     return result >= target
 
+#run multiple bots from same script, or separate scripts for different bots?
 class MyClient(discord.Client):
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
@@ -76,6 +78,7 @@ class MyClient(discord.Client):
             return
         if message.content.startswith("//"):
             return
+#implement discord role instead of individual ids for control commands. Also, allow for command messages to be private?
         if message.author.id == int(config('BLAKE')) or message.author.id == int(config('WHELCH')) or message.author.id == int(config('MASON')) or message.author.id == int(config('AARON') or message.author.id == int(config('SAMUEL'))):
             if message.content == 'reset':
                 self.conversation_history = self.default_conversation_history
@@ -85,11 +88,13 @@ class MyClient(discord.Client):
                 print(f"{self.name}: {self.greeting}")
                 return
 
+#implement persistent memory, perhaps store conversation history in a text file which is wiped on reset?
         if message.author.id == int(config('BLAKE')):
             if message.content == 'sleep':
                 await message.channel.send('Nighty night!')
                 exit()
 
+#implement method for multiple types of checks (i.e intimidation, insight, sleight of hand, etc.)
         if message.content.lower().startswith("[persuasion]"):
             message.content = message.content[len("[persuasion]"):].lstrip()  # Remove the word and any leading whitespace
             if not self.hasAttemptedConvince:
