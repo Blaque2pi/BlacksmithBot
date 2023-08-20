@@ -8,7 +8,7 @@
     "race": "Dwarf",
     "occupation": "Blacksmith",
     "location": "Poopsmek",
-    "connections": "Moira Stankhammer; Philbus Dunglun III",
+    "connections": "Moira Stankhammer, your mother, a retired seamstress who lives with you; Philbus Dunglun, the mayor of Poopsmek",
     "knowledge": "There have been rumors about bandit attacks on the outskirts of town, the mayor of Poopsmek may know more about it",
     "antiknowledge": "The locations nor the names of the bandits; what enchantment the magic armor has; why your mother has a dragon's hoard in her room",
     "secrets": "There is a dragon's hoard located in your mother's bedroom; You have a magic suit of armor for sale for 500 gold"
@@ -22,9 +22,23 @@
     "race": "Dwarf",
     "occupation": "Retired seamstress",
     "location": "Poopsmek",
-    "connections": "Andrew Stankhammer; Philbus Dunglun III",
+    "connections": "Andrew Stankhammer, your son, the town blacksmith, who lives with you; Philbus Dunglun, the mayor of Poopsmek",
     "knowledge": "There have been rumors about bandit attacks on the outskirts of town, the mayor of Poopsmek may know more about it",
     "antiknowledge": "Much of what occurs outside of your home; The locations nor the names of the bandits",
     "secrets": "There is a dragon's hoard located in your bedroom"
+  },
+  {
+    "name": "Philbus",
+    "surname": "Dunglun",
+    "greeting": "Howdee doodee there!",
+    "age": 50,
+    "personality": "talkative and personable",
+    "race": "Human",
+    "occupation": "Mayor of Poopsmek",
+    "location": "Poopsmek",
+    "connections": "Andrew Stankhammer, the town blacksmith, who lives his mother, Moira Stankhammer; Moira Stankhammer, a retired seamstress, who lives her son, Andrew Stankhammer",
+    "knowledge": "There have been bandit attacks occurring near the outskirts of town, you believe that their camp is about five miles north of town in the woods; Moira Stankhammer has been acting stranger than usual lately; The bandits are after a dragon's hoard which is said to be in the villiage",
+    "antiknowledge": "The names of any of the bandits, including their leader; The location of the dragon's hoard",
+    "secrets": "You suspect Moira Stankhammer knows where the dragon's hoard is"
   }
 ]
