@@ -43,6 +43,48 @@ def get_npc_response(prompt):
     )
     return response.choices[0].message.content
 
+def get_new_profiles(location, number):
+    message = ""
+    message += f"I want you to generate {number} profiles for NPCs in dungeons and dragons. "
+    message += f"They all live in a town/city names {location}. "
+    message += "You will output the following traits for each profile, each trait containing one string of information and each trait name being in lower case type: "
+    message += "name, "
+    message += "surname, "
+    message += "greeting (this will be a piece of dialogue that this character will say at the start of the conversation with a player), "
+    message += "age, "
+    message += "personality, "
+    message += "race, "
+    message += "occupation, "
+    message += "location (this should just be the town/city name, "
+    message += "connections (this will describe the relationships this character has with other people in the town), "
+    message += "knowledge (this will include rumors that this character has heard or interesting things that the character will want to talk about), "
+    message += "antiknowledge (this will detail specific information that this character does not know), "
+    message += "secrets (these are things that this character is keeping secret from the players, but can be persuaded to share if they succeed their skill checks). "
+    message += "Only respond with a single keyless json code object, each individual profile in that object should also be keyless. Also, it should be recognized as a list rather than a dictionary in python."
+    prompt = [
+        {"role": "system", "content": f"You are an AI helper for a dungeon master in the game of Dungeons and Dragons"},
+        {"role": "user", "content": f"{message}"}
+    ]
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=prompt,
+        max_tokens=1500
+    )
+    print(response)
+    response_content = response.choices[0].message.content
+    print(response_content)
+    code_str = ""
+    if "\n[" in response:
+        code_start = response_content.find("[")
+        code_end = response_content.find("]", code_start)
+        code_str = response_content[code_start:code_end].strip()
+        print(code_str)
+    if response_content.startswith("["):
+        code_str = response_content
+        print(code_str)
+    code_json = json.loads(code_str)
+    return code_json
+
 def roll(num, sides, mod=0):
     if num <= 0 or sides <= 0:
         raise ValueError("Number of dice and sides must be positive integers.")
@@ -132,19 +174,40 @@ class MyClient(discord.Client):
 intents = discord.Intents.default()
 intents.message_content = True
 
-input_location = input("Where are we? ")
+input_location = input("Where are we? ").capitalize()
 with open('npc.json', 'r') as file:
     input_npcs = json.load(file)
 while True:
+    with open('npc.json', 'r') as file:
+        input_npcs = json.load(file)
     input_profiles = [npc for npc in input_npcs if npc["location"] == f"{input_location}"]
-    input_location = input(f"There are {len(input_profiles)} profiles for {input_location}. Press Enter to proceed, or enter a new location. ")
-    if input_location == "":
-        break
+    if len(input_profiles) > 0:
+        input_location_okay = input(f"There are {len(input_profiles)} profiles for {input_location}. Press Enter to proceed, or enter a new location. ")
+        if input_location_okay == "":
+            print("Generating NPCs... ")
+            break
+    else:
+        new_location_okay = input(f"There are no profiles for {input_location}. Press Enter to generate profiles, or enter a new location. ")
+        if new_location_okay == "":
+            while True:
+                new_profiles_number = input(f"Please enter a number of new profiles to generate for {input_location} (Maximum 10), or enter a new location. ")
+                if 1 <= int(new_profiles_number) <= 10:
+                    new_profiles = get_new_profiles(input_location, new_profiles_number)
+                    print("new profiles loaded")
+                    input_npcs.extend(new_profiles)
+                    with open("npc.json", "w") as file:
+                        json.dump(input_npcs, file, indent=4)
+                    break
+                else:
+                    input_location = new_profiles_number
+                    break
+
+print("success!")
 loop = asyncio.get_event_loop()
 for i in range(len(input_profiles)):
     profile_index = i-1
     input_profile = input_profiles[profile_index]
     profile_name = f"{input_profile['name']}_{input_profile['surname']}"
-    client = MyClient(intents=intents, profile = input_profile)
+    client = MyClient(intents=intents, profile=input_profile)
     loop.create_task(run_bot(client, profile_name))
 loop.run_forever()
