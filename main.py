@@ -190,8 +190,8 @@ while True:
         new_location_okay = input(f"There are no profiles for {input_location}. Press Enter to generate profiles, or enter a new location. ")
         if new_location_okay == "":
             while True:
-                new_profiles_number = input(f"Please enter a number of new profiles to generate for {input_location} (Maximum 10), or enter a new location. ")
-                if 1 <= int(new_profiles_number) <= 10:
+                new_profiles_number = input(f"Please enter a number of new profiles to generate for {input_location} (Maximum 5), or enter a new location. ")
+                if 1 <= int(new_profiles_number) <= 5:
                     new_profiles = get_new_profiles(input_location, new_profiles_number)
                     print("new profiles loaded")
                     input_npcs.extend(new_profiles)
