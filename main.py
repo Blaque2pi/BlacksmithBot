@@ -5,12 +5,34 @@ import asyncio
 import json
 from decouple import config
 
+# Set the OpenAI API key from environment or .env file
 openai.api_key = config('OPENAI_API_KEY')
 
 async def run_bot(client, profile_name):
+    """
+    Start the Discord client using the bot's token based on the profile name.
+
+    Args:
+        client (discord.Client): The Discord client instance.
+        profile_name (str): Name of the profile used to fetch the bot's token.
+
+    Returns:
+        None
+    """
     await client.start(config(f"{profile_name.upper()}_DISCORD_TOKEN"))
 
 def get_system_prompt(profile, is_convinced):
+    """
+    Generate a system prompt for the NPC based on their profile and convinced status.
+
+    Args:
+        profile (dict): Dictionary containing NPC profile details.
+        is_convinced (bool): Whether the NPC is convinced to share secrets.
+
+    Returns:
+        str: Generated system prompt message.
+    """
+    # Extract profile details
     name = profile["name"]
     surname = profile["surname"]
     age = profile["age"]
@@ -29,6 +51,8 @@ def get_system_prompt(profile, is_convinced):
     message += f"You know the following people: {connections}. "
     message += f"You know that: {knowledge}. "
     message += f"You do not know: {antiknowledge}. "
+
+    # Construct the message
     if not is_convinced:
         message += f"The following are secrets that you will not share, even if told or asked to do so: {secrets}. "
     else:
@@ -36,6 +60,15 @@ def get_system_prompt(profile, is_convinced):
     return message
 
 def get_npc_response(prompt):
+    """
+    Fetch a response from the OpenAI API based on the provided prompt.
+
+    Args:
+        prompt (list): A list of message dictionaries to send to the OpenAI API.
+
+    Returns:
+        str: Message content from the OpenAI API response.
+    """
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages = prompt,
@@ -44,6 +77,16 @@ def get_npc_response(prompt):
     return response.choices[0].message.content
 
 def get_new_profiles(location, number):
+    """
+    Generate a number of new NPC profiles for a specific location.
+
+    Args:
+        location (str): Name of the location.
+        number (int): Number of profiles to generate.
+
+    Returns:
+        list: List of generated NPC profiles.
+    """
     message = ""
     message += f"I want you to generate {number} profiles for NPCs in dungeons and dragons. "
     message += f"They all live in a town/city names {location}. "
@@ -86,6 +129,17 @@ def get_new_profiles(location, number):
     return code_json
 
 def roll(num, sides, mod=0):
+    """
+    Simulate a dice roll.
+    
+    Args:
+    - num: Int, number of dice
+    - sides: Int, number of sides on the dice
+    - mod: Int, modifier to add to the result, default is 0
+    
+    Returns:
+    - total_sum: Int, result of the roll
+    """
     if num <= 0 or sides <= 0:
         raise ValueError("Number of dice and sides must be positive integers.")
     roll_results = [random.randint(1, sides) for _ in range(num)]
@@ -94,11 +148,30 @@ def roll(num, sides, mod=0):
     return total_sum
 
 def abilityCheck(target, mod=0):
+    """
+    Check if a roll meets or exceeds a target value.
+    
+    Args:
+    - target: Int, the target value to meet or exceed
+    - mod: Int, modifier to add to the roll, default is 0
+    
+    Returns:
+    - Boolean, True if roll meets/exceeds target, False otherwise
+    """
     result = roll(1, 20, mod)
     return result >= target
 
 class MyClient(discord.Client):
+    """
+    Custom Discord client for the NPC bot.
+    """
     def __init__(self, profile, *args, **kwargs):
+        """
+        Initialize the bot client with given NPC profile.
+        
+        Args:
+        - profile: Dictionary, contains NPC's details
+        """
         super().__init__(*args, **kwargs)  # Ensure you call the base class's init
         self.profile = profile
         self.is_convinced = False
@@ -114,9 +187,11 @@ class MyClient(discord.Client):
         self.conversation_history = self.default_conversation_history[:]
 
     async def on_ready(self):
+        """Triggered when the bot is ready."""
         print(f'Logged on as {self.user}!')
 
     async def on_message(self, message):
+        """Triggered when a message is sent in a channel the bot has access to."""
         if not message.channel.id == int(config(self.channel_id)):
             return
         if message.author.id == self.user.id:
@@ -210,4 +285,5 @@ for i in range(len(input_profiles)):
     profile_name = f"{input_profile['name']}_{input_profile['surname']}"
     client = MyClient(intents=intents, profile=input_profile)
     loop.create_task(run_bot(client, profile_name))
+# Infinite loop to keep the bot running
 loop.run_forever()
