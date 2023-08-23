@@ -7,8 +7,8 @@ from decouple import config
 
 openai.api_key = config('OPENAI_API_KEY')
 
-async def run_bot(client, profile_name):
-    await client.start(config(f"{profile_name.upper()}_DISCORD_TOKEN"))
+async def run_bot(client, bot_num):
+    await client.start(config(f"NPC{bot_num}_DISCORD_TOKEN"))
 
 def get_system_prompt(profile, is_convinced):
     name = profile["name"]
@@ -56,11 +56,11 @@ def get_new_profiles(location, number):
     message += "race, "
     message += "occupation, "
     message += "location (this should just be the town/city name, "
-    message += "connections (this will describe the relationships this character has with other people in the town), "
+    message += "connections (this will describe the relationships this character has with other generated NPCs in the town), "
     message += "knowledge (this will include rumors that this character has heard or interesting things that the character will want to talk about), "
     message += "antiknowledge (this will detail specific information that this character does not know), "
     message += "secrets (these are things that this character is keeping secret from the players, but can be persuaded to share if they succeed their skill checks). "
-    message += "Only respond with a single keyless json code object, each individual profile in that object should also be keyless. Also, it should be recognized as a list rather than a dictionary in python."
+    message += "Only respond with a single keyless json code object, each individual profile in that object should also be keyless. It should also be recognized as a list rather than a dictionary in python."
     prompt = [
         {"role": "system", "content": f"You are an AI helper for a dungeon master in the game of Dungeons and Dragons"},
         {"role": "user", "content": f"{message}"}
@@ -74,7 +74,7 @@ def get_new_profiles(location, number):
     response_content = response.choices[0].message.content
     print(response_content)
     code_str = ""
-    if "\n[" in response:
+    if "\n[" in response_content:
         code_start = response_content.find("[")
         code_end = response_content.find("]", code_start)
         code_str = response_content[code_start:code_end].strip()
@@ -98,14 +98,18 @@ def abilityCheck(target, mod=0):
     return result >= target
 
 class MyClient(discord.Client):
-    def __init__(self, profile, *args, **kwargs):
+    def __init__(self, profile, bot_num, *args, **kwargs):
         super().__init__(*args, **kwargs)  # Ensure you call the base class's init
+        self.bot_num = bot_num
         self.profile = profile
         self.is_convinced = False
         self.hasAttemptedConvince = False
         self.name = self.profile["name"]
         self.surname = self.profile["surname"]
+        self.full_name = f"{self.name} {self.surname}"
         self.greeting = self.profile["greeting"]
+        self.location = self.profile["location"]
+        self.channel_name = f"{self.name.lower()}-{self.surname.lower()}"
         self.channel_id = f"{self.name.upper()}_{self.surname.upper()}_CHANNEL_ID"
         self.default_conversation_history = [
             {"role": "system", "content": f"{get_system_prompt(self.profile, self.is_convinced)}"},
@@ -115,9 +119,28 @@ class MyClient(discord.Client):
 
     async def on_ready(self):
         print(f'Logged on as {self.user}!')
+        if not self.user.name == self.full_name:
+            await self.user.edit(username=f"{self.full_name}")
+            print(f"Bot's name changed to {self.full_name}!")
+        guild = self.guilds[0]
+        found_category = discord.utils.get(guild.categories, name=self.location)
+        found_channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+        if not found_category:
+            print(f'Catergory "{self.location}" not found, creating... ')
+            await guild.create_category(self.location)
+            print(f'Category "{self.location}" created!')
+        if found_channel:
+            print(f'Found channel {self.channel_name}!')
+        else:
+            print(f'Text channel "{self.channel_name}" not found, creating... ')
+            category = discord.utils.get(guild.categories, name=self.location)
+            await guild.create_text_channel(self.channel_name, category=category)
+            print(f'Text channel "{self.channel_name}" created in {self.location}!')
+            channel = discord.utils.get(guild.text_channels, name=self.channel_name)
+            await channel.send(f"{self.greeting}")
 
     async def on_message(self, message):
-        if not message.channel.id == int(config(self.channel_id)):
+        if not message.channel.name == self.channel_name:
             return
         if message.author.id == self.user.id:
             return
@@ -170,9 +193,9 @@ class MyClient(discord.Client):
         response = response[len(f"{self.name}:"):].lstrip()
         await message.channel.send(response)
 
-
 intents = discord.Intents.default()
 intents.message_content = True
+intents.guilds = True
 
 input_location = input("Where are we? ").capitalize()
 with open('npc.json', 'r') as file:
@@ -205,9 +228,10 @@ while True:
 print("success!")
 loop = asyncio.get_event_loop()
 for i in range(len(input_profiles)):
-    profile_index = i-1
+    profile_index = i
     input_profile = input_profiles[profile_index]
-    profile_name = f"{input_profile['name']}_{input_profile['surname']}"
-    client = MyClient(intents=intents, profile=input_profile)
-    loop.create_task(run_bot(client, profile_name))
+    bot_num = i+1
+    print(bot_num)
+    client = MyClient(intents=intents, profile=input_profile, bot_num=bot_num)
+    loop.create_task(run_bot(client, bot_num))
 loop.run_forever()
