@@ -46,7 +46,7 @@ def get_npc_response(prompt):
 def get_new_profiles(location, number):
     message = ""
     message += f"I want you to generate {number} profiles for NPCs in dungeons and dragons. "
-    message += f"They all live in a town/city names {location}. "
+    message += f"They all live in a town/city named {location}. "
     message += "You will output the following traits for each profile, each trait containing one string of information and each trait name being in lower case type: "
     message += "name, "
     message += "surname, "
